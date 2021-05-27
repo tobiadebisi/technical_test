@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ratingsapi-cm
+  namespace: ratingsapp-ns
+data:
+  ratingsapi_url: ratingsapi-svc
+
+

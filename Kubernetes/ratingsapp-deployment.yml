@@ -1,0 +1,128 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratingsweb-deploy
+  namespace: ratings-ns
+  labels:
+    app: ratingsweb
+    tier: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLebals:
+      app: ratingsaweb
+      tier: frontend
+  minReadySeconds: 5
+  type: RollingUpdate
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: ratingsweb
+        tier: frontend
+    spec:
+      containers:
+      - name: ratingsweb
+        image: ratingsweb:v1
+        imagePullPolicy: Always
+        Port:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 1
+          requests:
+            cpu: 0.2
+        env:
+        - name: API
+          valueFrom:
+            configMapKeyRef:
+              name: ratingsapi-cm
+              key: ratingsapi_url
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ratingsweb-svc
+  namespace: ratings-ns
+spec:
+  selector:
+    app: ratingsweb
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  type: ClusterIP
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratingsapi-deploy
+  namespace: ratings-ns
+  labels:
+    app: ratingsapi
+    tier: backend
+spec:
+  replicas: 2
+  selector:
+    matchLebals:
+      app: ratingsapi
+      tier: backend
+  minReadySeconds: 5
+  type: RollingUpdate
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: ratingsapi
+        tier: backend
+    spec:
+      containers:
+      - name: ratingsapi
+        image: ratingsapi:v1
+        imagePullPolicy: Always
+        Port:
+        - containerPort: 3000
+        resources:
+          limits:
+            cpu: 1
+          requests:
+            cpu: 0.2
+        env:
+        - name: MONGODB_URI # the application expects to find the MongoDB connection details in this environment variable
+          valueFrom:
+            secretKeyRef:
+              name: ratingsdb-secret
+        readinessProbe: 
+          httpGet:
+            port: 3000
+            path: /healthz
+        livenessProbe: 
+          httpGet:
+            port: 3000
+            path: /healthz
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ratingsapi-svc
+  namespace: ratings-ns
+spec:
+  selector:
+    app: ratingsapi
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: ClusterIP

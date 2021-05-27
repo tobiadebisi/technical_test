@@ -1,0 +1,18 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata: 
+  name: ratings-ingress
+  namespace: ratings-ns
+spec:
+  tls:
+  - hosts:
+    - ratings.com
+    secretName: ratingsdb-secret-lts
+  rules:
+  - host: ratings.com #public IP of the ingress-controller loadbalancer will be map to this domain name on DNS server
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: ratingsweb-svc
+          servicePort: 80
