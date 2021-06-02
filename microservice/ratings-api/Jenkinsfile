@@ -1,25 +1,43 @@
 pipeline {
-
-	agent any
-
-	stages {
-
-		stage("build") {
-			steps {
-				echo 'building the application...'			
-			}
-		}
-
-		stage("test") { 
-            steps { 
-				echo 'testing the application...'
-            }
+  environment {
+    registry = "tobbynyy/ratings"
+    registryCredential = 'dockerCredentials'
+    dockerImage = ''
+  }
+  agent any
+  stages {
+    stage('Cloning Git') {
+      steps {
+        git 'https://github.com/tobiadebisi/ratings-api.git'
+      }
+    }
+    stage('Building image') {
+      steps{
+        script {
+          dockerImage = docker.build registry + ":$BUILD_NUMBER"
         }
-
-		stage("deploy") { 
-            steps { 
-				echo 'deploying the application...'
-        	}
+      }
+    }
+    stage('Deploy Image') {
+      steps{
+        script {
+          docker.withRegistry( '', registryCredential ) {
+            dockerImage.push()
+          }
         }
-	}
+      }
+    }
+    stage('Remove Unused docker image') {
+      steps{
+        sh "docker rmi $registry:$BUILD_NUMBER"
+      }
+    }
+	stage('Deploy App') {
+      steps {
+        script {
+          kubernetesDeploy(configs: "ratingsapp-secret.yml", "ratingsapp-configmap.yml", "ratingsapp-deployment.yml" "ratingsapp-hpa.yml" "ratingsapp-ingress.yml", kubeconfigId: "mykubeconfig")
+        }
+      }
+    }
+  }
 }
